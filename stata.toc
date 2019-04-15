@@ -1,0 +1,5 @@
+v 0.1.0
+d Materials by Luís Fonseca
+d lfonseca@london.edu
+
+p rcallstringdist
