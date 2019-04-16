@@ -1,10 +1,13 @@
 # RCALLSTRINGDIST: Call R's stringdist package from Stata using rcall
-- Current version: 0.1.0 15apr2019
+**unpolished for now, but works**
+- Current version: 0.2.0 16apr2019
 - Contents: [`updates`](#updates) [`description`](#description) [`install`](#install) [`usage`](#usage) [`to do`](#to-do) [`author`](#author)
 
 -----------
 
 ## Updates
+* **0.1.0 15apr2019**:
+	- adds several options: matrix (for one and two variables), duplicates, and sortwords
 * **0.1.0 15apr2019**:
 	- first version of the command
 

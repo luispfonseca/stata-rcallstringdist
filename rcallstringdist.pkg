@@ -1,7 +1,7 @@
-v 0.1.0
+v 0.2.0
 d 'RCALLSTRINGDIST': rcallstringdist
 d
-d Distribution-Date:   20190415
+d Distribution-Date:   20190416
 d License: MIT
 d
 F rcallstringdist.ado
