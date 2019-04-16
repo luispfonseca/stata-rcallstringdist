@@ -6,7 +6,7 @@
 -----------
 
 ## Updates
-* **0.1.0 15apr2019**:
+* **0.2.0 16apr2019**:
 	- adds several options: matrix (for one and two variables), duplicates, and sortwords
 * **0.1.0 15apr2019**:
 	- first version of the command
