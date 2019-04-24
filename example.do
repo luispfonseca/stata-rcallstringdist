@@ -64,11 +64,11 @@ save example_dataset, replace
 *** 10 pairs will be compared
 rcallstringdist nameA nameB, matrix duplicates
 
+* Comparing one list of strings with itself, all possible combinations
 *** if only one variable is passed, compare all pairs of strings within
 *** we have 5 unique strings, 5x4/2=10 combinations
 use example_dataset, clear
 rcallstringdist nameA, matrix
-* Comparing one list of strings with itself
 *** to keep all permutations (5x4=20), we can use the duplicates option
 use example_dataset, clear
 rcallstringdist nameA, matrix duplicates

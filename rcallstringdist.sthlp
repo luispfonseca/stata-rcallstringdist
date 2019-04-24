@@ -41,12 +41,14 @@ Additional options
 {marker description}{...}
 {title:Description}
 
-This command makes use of {help rcall} to call the R package {cmd:stringdist} inside Stata.
+{pstd}This command makes use of {help rcall} to call the R package {cmd:stringdist} inside Stata.
+
+{pstd}This command has a few dependencies. Learn more about them at the GitHub repo page at {browse "https://github.com/luispfonseca/stata-rcallstringdist"}.
 
 {marker method}{...}
 {title:Method}
 
-As of version 0.9.5.1 of stringdist (the R package), these are the available methods:
+{pstd}As of version 0.9.5.1 of stringdist (the R package), these are the available methods:
 
 {p2colset 9 22 24 2}{...}
 {p2col :{opt Method}}Description{p_end}
@@ -65,7 +67,8 @@ As of version 0.9.5.1 of stringdist (the R package), these are the available met
 
 {marker ropt}{...}
 {title:Other R options}
-For more information on other arguments that can be passed to the R package stringdist, check that package's help file online ({browse "https://www.rdocumentation.org/packages/stringdist/topics/stringdist"}) or in R by running {cmd:??stringdist}.
+
+{pstd}For more information on other arguments that can be passed to the R package stringdist, check that package's help file online ({browse "https://www.rdocumentation.org/packages/stringdist/topics/stringdist"}) or in R by running {cmd:??stringdist}.
 
 {marker examples}{...}
 {title:Examples}
@@ -133,11 +136,11 @@ save example_dataset, replace
 *** 10 pairs will be compared
 rcallstringdist nameA nameB, matrix duplicates
 
+* Comparing one list of strings with itself, all possible combinations
 *** if only one variable is passed, compare all pairs of strings within
 *** we have 5 unique strings, 5x4/2=10 combinations
 use example_dataset, clear
 rcallstringdist nameA, matrix
-* Comparing one list of strings with itself
 *** to keep all permutations (5x4=20), we can use the duplicates option
 use example_dataset, clear
 rcallstringdist nameA, matrix duplicates

@@ -43,7 +43,7 @@ program define rcallstringdist
 	if "`sortwords'" != "" {
 		cap which rowsort
 		if c(rc) {
-			di as error "You need to install rowsort for the sortwords option. There are to rowsort packages available, and only one allows the use of strings. To install that one, run {bf:net install pr0046.pkg}"
+			di as error "You need to install rowsort for the sortwords option. There are two rowsort packages available, and only one allows the use of strings. To install that one, run {bf:net install pr0046.pkg}"
 			error
 		}
 	}

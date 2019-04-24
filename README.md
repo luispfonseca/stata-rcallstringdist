@@ -47,6 +47,11 @@ net install github, from("https://haghish.github.io/github/") replace
 gitget rcall
 ```
 
+The command `rowsort` is needed when the `sortwords` option is called. There are two rowsort packages available, and only one allows the use of strings. To install that one, run:
+```
+net install pr0046.pkg
+```
+
 Commands from [`gtools`](https://github.com/mcaceresb/stata-gtools) by Mauricio Caceres Bravo are used to speed up the command when available. Follow the instructions in their pages to install them, especially if you are dealing with large datasets with repeated strings.
 
 ## Usage
@@ -114,11 +119,11 @@ save example_dataset, replace
 *** 10 pairs will be compared
 rcallstringdist nameA nameB, matrix duplicates
 
+* Comparing one list of strings with itself, all possible combinations
 *** if only one variable is passed, compare all pairs of strings within
 *** we have 5 unique strings, 5x4/2=10 combinations
 use example_dataset, clear
 rcallstringdist nameA, matrix
-* Comparing one list of strings with itself
 *** to keep all permutations (5x4=20), we can use the duplicates option
 use example_dataset, clear
 rcallstringdist nameA, matrix duplicates
