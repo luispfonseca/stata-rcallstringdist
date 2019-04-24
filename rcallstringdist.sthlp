@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.2.0  16apr2019}{...}
+{* *! version 0.2.1  24apr2019}{...}
 {findalias asfradohelp}{...}
 {vieweralsosee "" "--"}{...}
 {vieweralsosee "[R] help" "help help"}{...}
@@ -14,18 +14,131 @@
 {marker syntax}{...}
 {title:Syntax}
 
-To write.
+{p 8 15 2}
+{opt rcallcountrycode} {it:varlist} [, {opt m:ethod}({it:method}) {opt w:eight}({it:numlist}) {opt q}({it:integer}) {opt p}({it:numlist}) {opt bt}({it:numlist})  {opt usebytes} {opt nthread}({it:integer}) {opt mat:rix} {opt dup:licates} {opt gen:erate}({it:varname}) {opt sortw:ords} {opt debug}]
 
+{synoptset 20 tabbed}{...}
+{synopthdr}
+{synoptline}
+Options to pass to stringdist in R:
+{synopt:{opt m:ethod}}Method for distance calculation. The default is {it:osa}. See {help rcallstrindist##method:available methods}{p_end}
+{synopt:{opt w:eight}}Penalty for deletion, insertion, substitution and transposition{p_end}
+{synopt:{opt q}}Size of the q-gram{p_end}
+{synopt:{opt p}}Penalty factor for Jaro-Winkler distance{p_end}
+{synopt:{opt bt}}Winkler's boost threshold{p_end}
+{synopt:{opt usebytes}}Pass {opt useBytes} option to R{p_end}
+{synopt:{opt nthread}}Pass {opt nthread} argument to R{p_end}
+{synopt:{opt mat:rix}}Compare all possible pairs of strings. {bf:This option clears your working dataset from memory}{p_end}
+{synoptline}
+Additional options
+{synopt:{opt dup:licates}}Keeps both orderings of permuations with {opt matrix} and 1 variable passed (e.g. A with B and B with A){p_end}
+{synopt:{opt gen:erate}}Name of new variable to store string distance values{p_end}
+{synopt:{opt sortw:ords}}Sort words alphabetically within each string before comparing{p_end}
+{synopt:{opt debug}}Keeps intermediate files to help debug{p_end}
+{synoptline}
+{p2colreset}{...}
 
 {marker description}{...}
 {title:Description}
 
-To write.
+This command makes use of {help rcall} to call the R package {cmd:stringdist} inside Stata.
+
+{marker method}{...}
+{title:Method}
+
+As of version 0.9.5.1 of stringdist (the R package), these are the available methods:
+
+{p2colset 9 22 24 2}{...}
+{p2col :{opt Method}}Description{p_end}
+{synoptline}
+{p2col :{opt osa}}Optimal string aligment, (restricted Damerau-Levenshtein distance){p_end}
+{p2col :{opt lv}}Levenshtein distance (as in R's native adist){p_end}
+{p2col :{opt dl}}Full Damerau-Levenshtein distance{p_end}
+{p2col :{opt hamming}}Hamming distance (a and b must have same nr of characters){p_end}
+{p2col :{opt lcs}}Longest common substring distance{p_end}
+{p2col :{opt qgram}}q-gram distance{p_end}
+{p2col :{opt cosine}}cosine distance between q-gram profile{p_end}
+{p2col :{opt jaccard}}Jaccard distance between q-gram profile{p_end}
+{p2col :{opt jw}}Jaro, or Jaro-Winker distance{p_end}
+{p2col :{opt soundex}}Distance based on soundex encoding{p_end}
+{p2colreset}{...}
+
+{marker ropt}{...}
+{title:Other R options}
+For more information on other arguments that can be passed to the R package stringdist, check that package's help file online ({browse "https://www.rdocumentation.org/packages/stringdist/topics/stringdist"}) or in R by running {cmd:??stringdist}.
 
 {marker examples}{...}
 {title:Examples}
 
-To write.
+* Comparing two lists of strings
+clear
+input str30 nameA
+"Gates Bill"
+"Gates, Bill"
+"bill gates"
+"William H. Gates III"
+end
+
+input str30 nameB
+"Bill Gates"
+"Bill Gates"
+"Bill Gates"
+"William Henry Gates III"
+
+compress
+
+** Comparing two variables, row by row
+*** default method (osa), default arguments, default generated variable name
+rcallstringdist nameA nameB
+*** specific variable names
+rcallstringdist nameA nameB, gen(osa)
+rcallstringdist nameA nameB, method(cosine) q(3) gen(cosine)
+*** sometimes it's worth sorting words within each string. the first row will now be a perfect match
+rcallstringdist nameA nameB, gen(osa_sortw) sortwords
+*** it can also be worth cleaning up the strings before feeding them (e.g. lowercase, remove punctuation and diacritics)
+gen nameAclean = lower(nameA)
+gen nameBclean = lower(nameB)
+rcallstringdist nameAclean nameBclean, gen(osa_clean)
+rcallstringdist nameAclean nameBclean, gen(osa_clean_sortw) sortwords
+
+** Comparing two variables, all possible combinations
+*** by calling the matrix option, we can compare all possible combinations of strings from one variable with the other variable
+*** be aware that this option will clear your current working dataset from memory
+*** see the following example
+clear
+input str30 nameA
+"Gates Bill"
+"Gates, Bill"
+"bill gates"
+"William H. Gates III"
+"Bill Gates"
+"Bill Gates"
+end
+
+input str30 nameB
+"Bill Gates"
+"William Henry Gates III"
+"Bill Gates"
+end
+
+compress
+
+save example_dataset, replace
+
+*** each string of nameA will be compared with each string of nameB
+*** nameA has 5 unique strings, while name B has 2
+*** 10 pairs will be compared
+rcallstringdist nameA nameB, matrix
+
+*** if only one variable is passed, all pairs of strings in that variable will be compared
+*** we have 5 unique strings, 5x4/2=10 combinations
+use example_dataset, clear
+rcallstringdist nameA, matrix
+* Comparing one list of strings with itself
+*** if we want to keep all permutations of unique strings (5x4=20), we can use the duplicates option
+use example_dataset, clear
+rcallstringdist nameA, matrix duplicates
+
 
 {title:Author}
 

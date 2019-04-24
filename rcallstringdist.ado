@@ -1,10 +1,10 @@
-*! version 0.2.0 16apr2019 Luís Fonseca, https://github.com/luispfonseca
+*! version 0.2.1 24apr2019 Luís Fonseca, https://github.com/luispfonseca
 *! -rcallstringdist- Call R's stringdist package from Stata using rcall
 
 program define rcallstringdist
 	version 14
 
-	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(string) debug MATrix DUPLicates GENerate(string) SORTWords]
+	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(integer -999) debug MATrix DUPLicates GENerate(string) SORTWords]
 
 	* parse number of variables to distinguish the two matrix cases: crossing one variable with itself, or one variable with another
 	local numvars: word count `varlist'
@@ -43,7 +43,7 @@ program define rcallstringdist
 	if "`sortwords'" != "" {
 		cap which rowsort
 		if c(rc) {
-			di as error "You need to install rowsort for the sortwords option. There are to rowsort packages available, and only one allows the use of strings. To install that one, run {bf:net install pr0046}"
+			di as error "You need to install rowsort for the sortwords option. There are to rowsort packages available, and only one allows the use of strings. To install that one, run {bf:net install pr0046.pkg}"
 			error
 		}
 	}
@@ -110,12 +110,17 @@ program define rcallstringdist
 		local usebytes_opt = "TRUE"
 	}
 
-	if "`nthread'" == "" {
+	if `nthread' == -999 {
 		local nthread_opt = ""
 	}
 	else {
 		local nthread_opt = ", nthread = `nthread'"
 	}
+
+	if "`duplicates'" != "" & ("`matrix'" == "" | "`numvars'" == "2") {
+		di as error "Ignoring the duplicates option, as it applies only in the matrix method when 1 variable is passed"
+	}
+
 
 	* prepare list of unique names to send; use gduplicates if possible
 	tokenize "`varlist'"
@@ -135,7 +140,7 @@ program define rcallstringdist
 
 	* sort words inside each string
 	if "`sortwords'" != "" {
-	tokenize "`varlist'"
+		tokenize "`varlist'"
 		forvalues k = 1/`numvars' {
 			qui split ``k'', g(__stringsplit1_)
 			unab x : __stringsplit1_*
@@ -302,8 +307,11 @@ program define rcallstringdist
 
 		order *1 *2 `generate'
 
-		if "`duplicates'" == "" {
+		if "`numvars'" == "1" {
 			qui drop if string1 == string2
+		}
+
+		if "`duplicates'" == "" | "`numvars'" == "2" {
 
 			tempvar first second
 			gen `first' = cond(string1 < string2, string1, string2)
@@ -313,7 +321,7 @@ program define rcallstringdist
 			qui `g'egen `pair_id' = group(`first' `second')
 
 			* keep only one string of the same pair, where string1 is the first, alphabetically
-			sort `pair_id' `string1' `string2'
+			`hash'sort `pair_id' `string1' `string2'
 			tempvar pair_obs
 			bysort `pair_id': gen `pair_obs' = _n
 			qui drop if `pair_obs' > 1
