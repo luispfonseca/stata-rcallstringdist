@@ -1,5 +1,4 @@
 # RCALLSTRINGDIST: Call R's stringdist package from Stata using rcall
-**unpolished for now, but works**
 - Current version: 0.2.1 24apr2019
 - Contents: [`updates`](#updates) [`description`](#description) [`install`](#install) [`usage`](#usage) [`to do`](#to-do) [`author`](#author)
 
@@ -20,24 +19,22 @@ I'd like to thank the authors of both packages:
 
 ## Install
 
-1. Install R first (see below how)
-2. Install this package:
+1. Install R [directly](https://cran.r-project.org/) or with [RStudio](https://www.rstudio.com/products/rstudio/download/) for a graphical interface.
+2. Install this package using the [`github`](https://github.com/haghish/github) command by [E. F. Haghish](http://www.haghish.com/). This will also install dependencies automatically.
 
 ```
 net install github, from("https://haghish.github.io/github/") replace
 github install luispfonseca/stata-rcallstringdist
 ```
-3. The Stata package requires an R package, that is specified in [_dependency.do_](https://github.com/haghish/stata-rcallstringdist/blob/master/dependency.do) file. This file is executed automatically after installing `rcallstringdist` package. 
 
 ### Dependencies
-For this command to work, you need R, an R package named [`stringdist`](https://github.com/markvanderloo/stringdist), and a Stata package named [`rcall`](https://github.com/haghish/rcall) that enables you to use the R package within Stata. 
-- The command `rowsort` is needed when the `sortwords` option is called. 
-- Commands from [`gtools`](https://github.com/mcaceresb/stata-gtools) by Mauricio Caceres Bravo are used to speed up the command when available. Follow the instructions in their pages to install them, especially if you are dealing with large datasets with repeated strings.
+This Stata package requires R, the [`stringdist`](https://github.com/markvanderloo/stringdist) R package, and the [`rcall`](https://github.com/haghish/rcall) Stata package. 
 
-If R is installed on your machine, these dependencies will be automatically installed! See the [_dependency.do_](https://github.com/haghish/stata-rcallstringdist/blob/master/dependency.do) file. __make sure R is installed on your machine before you attempt to install these packages on Stata__. 
+Additional (but not always required) dependencies:
+- The command `rowsort` (`net install pr0046.pkg`) is needed when the `sortwords` option is called. 
+- Commands from [`gtools`](https://github.com/mcaceresb/stata-gtools) by Mauricio Caceres Bravo are used to speed up the command when available.
 
-
-
+If R is installed on your machine, all these dependencies will be automatically installed when following the earlier instrutions. The file [_dependency.do_](https://github.com/luispfonseca/stata-rcallstringdist/blob/master/dependency.do) is executed automatically after installing `rcallstringdist` package. __Make sure R is installed on your machine before you attempt to install these packages on Stata__. 
 
 ## Usage
 ``` stata
@@ -97,7 +94,7 @@ end
 
 compress
 
-save example_dataset, replace
+save example_dataset
 
 *** each string of nameA will be compared with each string of nameB
 *** nameA has 5 unique strings, while name B has 2

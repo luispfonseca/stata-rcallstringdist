@@ -129,7 +129,7 @@ end
 
 compress
 
-save example_dataset, replace
+save example_dataset
 
 *** each string of nameA will be compared with each string of nameB
 *** nameA has 5 unique strings, while name B has 2
