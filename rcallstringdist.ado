@@ -163,9 +163,22 @@ program define rcallstringdist
 	tempfile origdata
 	qui save "`origdata'", replace
 
-	keep `1' `2'
-
-	qui export delimited _Rdatarcallstrdist_in.csv, replace
+	* for case of matrix separate the two variables when exporting.
+	* this can save a lot of time and space when the two lists have different sizes
+	* no need importing a large vector with empty strings, which will make the matrix large
+	if "`matrix'" == "" {
+		keep `1' `2'
+		qui export delimited _Rdatarcallstrdist_in.csv, replace
+	}
+	else {
+		keep `1'
+		qui drop if mi(`1')
+		qui export delimited _Rdatarcallstrdist_in_1.csv, replace
+		use "`origdata'", clear
+		keep `2'
+		qui drop if mi(`2')
+		qui export delimited _Rdatarcallstrdist_in_2.csv, replace
+	}
 
 	* call R
 	di as result "Calling R..."
@@ -173,18 +186,19 @@ program define rcallstringdist
 		cap noi rcall vanilla: ///
 			library(stringdist); ///
 			print(paste0("Using stringdist package version: ", packageVersion("stringdist"))); ///
-			data <- read.csv("_Rdatarcallstrdist_in.csv", fileEncoding = "utf8", na.strings = ""); ///
-			data\$`generate' <- stringdist(data\$`1',data\$`2', method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt'); ///
-			write.csv(data, file= "_Rdatarcallstrdist_out.csv", row.names=FALSE, fileEncoding="utf8", na = "")
+			rcalldata <- read.csv("_Rdatarcallstrdist_in.csv", fileEncoding = "utf8", na.strings = ""); ///
+			rcalldata\$`generate' <- stringdist(rcalldata\$`1',rcalldata\$`2', method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt'); ///
+			write.csv(rcalldata, file= "_Rdatarcallstrdist_out.csv", row.names=FALSE, fileEncoding="utf8", na = "")
 	}
 	else { // need to separate rcall for matrix option as this one is saving the data in a slightly different way and I can't add a $ to a local macro in Stata to make the code flexbile enough for both cases
 		// I get some error, likely due to rcall (as code runs fine in R): "too few quotes". but output goes through anyway. error 132
 		cap rcall vanilla: ///
 			library(stringdist); ///
 			print(paste0("Using stringdist package version: ", packageVersion("stringdist"))); ///
-			data <- read.csv("_Rdatarcallstrdist_in.csv", fileEncoding = "utf8", na.strings = ""); ///
-			dataout <- stringdistmatrix(data\$`1', data\$`2', method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt', useNames = c("none") `nthread_opt'); ///
-			write.csv(c(dataout), file= "_Rdatarcallstrdist_out.csv", fileEncoding="utf8", na = "")
+			rcalldata1 <- read.csv("_Rdatarcallstrdist_in_1.csv", fileEncoding = "utf8", na.strings = ""); ///
+			rcalldata2 <- read.csv("_Rdatarcallstrdist_in_2.csv", fileEncoding = "utf8", na.strings = ""); ///
+			dataout <- stringdistmatrix(rcalldata1\$`1', rcalldata2\$`2', method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt', useNames = c("none") `nthread_opt'); ///
+			write.csv(c(dataout), file= "_Rdatarcallstrdist_out.csv", row.names=FALSE, fileEncoding="utf8", na = "")
 	}
 	if c(rc) > 0 & (c(rc) != 132 & c(rc) != 111) { // rcall errors? output comes out fine, apparently. seems like rcall is trying to prepare to be able to bring data back to stata using its features, but could be slowing process down and outputting bug
 		di as error "Error when calling R. Check the error message above"
@@ -195,6 +209,8 @@ program define rcallstringdist
 	}
 	if "`debug'" == "" {
 		cap erase _Rdatarcallstrdist_in.csv
+		cap erase _Rdatarcallstrdist_in_1.csv
+		cap erase _Rdatarcallstrdist_in_2.csv
 		cap erase stata.output // due to error 132
 	}
 
@@ -247,7 +263,7 @@ program define rcallstringdist
 		cap erase "`origdata'"
 	}
 	else { // matrix option
-		* import the csv (moved away from st.load() due to issue #1 with encodings and accents)
+		* import the csv (moved away from st.load() due to issues with encodings and accents (issue #1 rcallcountrycode))
 		capture confirm file _Rdatarcallstrdist_out.csv
 		if c(rc) {
 			di as error "Restoring original data because file with the converted data was not found. Report to https://github.com/luispfonseca/stata-rcallstringdist/issues"
@@ -256,7 +272,6 @@ program define rcallstringdist
 			error 601
 		}
 		qui import delimited _Rdatarcallstrdist_out.csv, clear encoding("utf-8") varnames(1) case(preserve) rowrange(1:)
-		drop v1
 		if "`debug'" == "" {
 			cap erase _Rdatarcallstrdist_out.csv
 		}
@@ -265,7 +280,7 @@ program define rcallstringdist
 		di as result "Merging the data"
 
 		* store in dta file
-		gen obsnum = _n
+		gen long obsnum = _n
 		qui	save _Rdatarcallstrdist_instata, replace
 
 		qui use "`origdata'", clear
@@ -280,6 +295,7 @@ program define rcallstringdist
 		qui save "`strings'", replace
 
 		keep `1'
+		qui drop if mi(`1')
 		rename `1' string1
 		tempvar strnum1
 		gen `strnum1' = _n
@@ -287,13 +303,14 @@ program define rcallstringdist
 		qui save "`cross'", replace
 		qui use "`strings'", clear
 		keep `2'
+		qui drop if mi(`2')
 		tempvar strnum2
 		gen `strnum2' = _n
 		rename `2' string2
 		cross using "`cross'"
 		sort `strnum2' `strnum1'
 
-		gen obsnum = _n
+		gen long obsnum = _n
 		qui merge 1:1 obsnum using _Rdatarcallstrdist_instata, assert(match) nogen
 		qui drop if mi(x)
 		if "`debug'" == "" {
