@@ -11,11 +11,14 @@
 	- first version of the command
 
 ## Description
-This command uses [`rcall`](https://github.com/haghish/rcall) to call R's [`stringdist`](https://github.com/markvanderloo/stringdist). I don't know of any widely-used Stata command that can compute distance between strings for measures other than edit distance (such as `ustrdist`).
+This command uses [`rcall`](https://github.com/haghish/rcall) to call R's [`stringdist`](https://github.com/markvanderloo/stringdist). It allows the user to obtain various measures of distances between text strings.
 
 I'd like to thank the authors of both packages:
 * [`stringdist`](https://github.com/markvanderloo/stringdist) was written by [Mark van der Loo](https://github.com/markvanderloo), [Jan van der Laan](https://github.com/djvanderlaan), [R Core Team](https://www.r-project.org/contributors.html), [Nick Logan](https://github.com/ugexe), and [Chris Muir](https://github.com/ChrisMuir).
 * [`rcall`](https://github.com/haghish) was written by [E. F. Haghish](http://www.haghish.com/)
+
+### Alternatives
+- [StataStringUtilities](https://github.com/wbuchanan/StataStringUtilities) by [William Buchanan](https://github.com/wbuchanan)
 
 ## Install
 
