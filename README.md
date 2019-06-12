@@ -22,37 +22,22 @@ I'd like to thank the authors of both packages:
 
 1. Install R first (see below how)
 2. Install this package:
-```
-cap ado uninstall rcallstringdist
-local github "https://raw.githubusercontent.com"
-net install rcallstringdist, from(`github'/luispfonseca/stata-rcallstringdist/master/)
-```
-3. Make sure you install all the dependencies
 
-### Dependencies
-For this command to work, you need the following:
-
-#### R
-You need to have R installed. You can download RStudio [here](https://www.rstudio.com/products/rstudio/download/), which will install R on your computer and give you a graphical interface. 
-
-You also need to install the [`stringdist`](https://github.com/markvanderloo/stringdist) package in R. Follow the instructions in the page:
-
-> To install the latest release from CRAN, open an R terminal and type
-> `install.packages('stringdist')`
-
-#### Stata
-Install [`rcall`](https://github.com/haghish/rcall) following the instructions in the page. The following commands currently work:
 ```
 net install github, from("https://haghish.github.io/github/") replace
-gitget rcall
+github install luispfonseca/stata-rcallstringdist
 ```
+3. The Stata package requires an R package, that is specified in [_dependency.do_](https://github.com/haghish/stata-rcallstringdist/blob/master/dependency.do) file. This file is executed automatically after installing `rcallstringdist` package. 
 
-The command `rowsort` is needed when the `sortwords` option is called. There are two rowsort packages available, and only one allows the use of strings. To install that one, run:
-```
-net install pr0046.pkg
-```
+### Dependencies
+For this command to work, you need R, an R package named [`stringdist`](https://github.com/markvanderloo/stringdist), and a Stata package named [`rcall`](https://github.com/haghish/rcall) that enables you to use the R package within Stata. 
+- The command `rowsort` is needed when the `sortwords` option is called. 
+- Commands from [`gtools`](https://github.com/mcaceresb/stata-gtools) by Mauricio Caceres Bravo are used to speed up the command when available. Follow the instructions in their pages to install them, especially if you are dealing with large datasets with repeated strings.
 
-Commands from [`gtools`](https://github.com/mcaceresb/stata-gtools) by Mauricio Caceres Bravo are used to speed up the command when available. Follow the instructions in their pages to install them, especially if you are dealing with large datasets with repeated strings.
+If R is installed on your machine, these dependencies will be automatically installed! See the [_dependency.do_](https://github.com/haghish/stata-rcallstringdist/blob/master/dependency.do) file. __make sure R is installed on your machine before you attempt to install these packages on Stata__. 
+
+
+
 
 ## Usage
 ``` stata
