@@ -1,4 +1,4 @@
-*! version 0.2.1 24apr2019 Luís Fonseca, https://github.com/luispfonseca
+*! version 0.2.2 12jun2019 Luís Fonseca, https://github.com/luispfonseca
 *! -rcallstringdist- Call R's stringdist package from Stata using rcall
 
 program define rcallstringdist

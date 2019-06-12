@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.2.1  24apr2019}{...}
+{* *! version 0.2.2 12jun2019}{...}
 {findalias asfradohelp}{...}
 {vieweralsosee "" "--"}{...}
 {vieweralsosee "[R] help" "help help"}{...}
@@ -134,7 +134,7 @@ save example_dataset
 *** each string of nameA will be compared with each string of nameB
 *** nameA has 5 unique strings, while name B has 2
 *** 10 pairs will be compared
-rcallstringdist nameA nameB, matrix duplicates
+rcallstringdist nameA nameB, matrix
 
 * Comparing one list of strings with itself, all possible combinations
 *** if only one variable is passed, compare all pairs of strings within
