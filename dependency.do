@@ -8,7 +8,7 @@ R packages. If the installation fails, read the rcall help file and install
 the dependencies manually.
 ***/
 
-net install pr0046.pkg
+net install pr0046, from("http://www.stata-journal.com/software/sj9-1/")
 ssc install gtools
 gtools, upgrade
 github install haghish/rcall, stable
