@@ -1,4 +1,4 @@
-*! version 0.2.2 12jun2019 Luís Fonseca, https://github.com/luispfonseca
+*! version 0.2.3 13jun2019 Luís Fonseca, https://github.com/luispfonseca
 *! -rcallstringdist- Call R's stringdist package from Stata using rcall
 
 program define rcallstringdist
@@ -188,19 +188,21 @@ program define rcallstringdist
 			print(paste0("Using stringdist package version: ", packageVersion("stringdist"))); ///
 			rcalldata <- read.csv("_Rdatarcallstrdist_in.csv", fileEncoding = "utf8", na.strings = ""); ///
 			rcalldata\$`generate' <- stringdist(rcalldata\$`1',rcalldata\$`2', method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt'); ///
-			write.csv(rcalldata, file= "_Rdatarcallstrdist_out.csv", row.names=FALSE, fileEncoding="utf8", na = "")
+			write.csv(rcalldata, file= "_Rdatarcallstrdist_out.csv", row.names=FALSE, fileEncoding="utf8", na = ""); ///
+			rm(list=ls())
 	}
 	else { // need to separate rcall for matrix option as this one is saving the data in a slightly different way and I can't add a $ to a local macro in Stata to make the code flexbile enough for both cases
 		// I get some error, likely due to rcall (as code runs fine in R): "too few quotes". but output goes through anyway. error 132
-		cap rcall vanilla: ///
+		cap noi rcall vanilla: ///
 			library(stringdist); ///
 			print(paste0("Using stringdist package version: ", packageVersion("stringdist"))); ///
 			rcalldata1 <- read.csv("_Rdatarcallstrdist_in_1.csv", fileEncoding = "utf8", na.strings = ""); ///
 			rcalldata2 <- read.csv("_Rdatarcallstrdist_in_2.csv", fileEncoding = "utf8", na.strings = ""); ///
 			dataout <- stringdistmatrix(rcalldata1\$`1', rcalldata2\$`2', method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt', useNames = c("none") `nthread_opt'); ///
-			write.csv(c(dataout), file= "_Rdatarcallstrdist_out.csv", row.names=FALSE, fileEncoding="utf8", na = "")
+			write.csv(c(dataout), file= "_Rdatarcallstrdist_out.csv", row.names=FALSE, fileEncoding="utf8", na = ""); ///
+			rm(list=ls())
 	}
-	if c(rc) > 0 & (c(rc) != 132 & c(rc) != 111) { // rcall errors? output comes out fine, apparently. seems like rcall is trying to prepare to be able to bring data back to stata using its features, but could be slowing process down and outputting bug
+	if c(rc) > 0 {
 		di as error "Error when calling R. Check the error message above"
 		di as error "Restoring original data"
 		qui use "`origdata'", clear
