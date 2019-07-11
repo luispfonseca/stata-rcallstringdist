@@ -4,8 +4,29 @@
 program define rcallstringdist
 	version 14
 
-	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(integer -999) debug MATrix KEEPDUPLicates GENerate(string) SORTWords ignorecase ascii whitespace punctuation clean]
+	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(integer -999) debug MATrix KEEPDUPLicates GENerate(string) SORTWords ignorecase ascii whitespace PUNCTuation CLean CHECKrcall]
 
+	* confirm that rcall is installed only after all errors and conflicts checked
+	cap which rcall
+	if c(rc) {
+		di as error "The package Rcall is required for this package to work. Follow the instructions in https://github.com/haghish/rcall"
+		di as error "The following commands should work:"
+		di as error `"net install github, from("https://haghish.github.io/github/") replace"'
+		di as error "gitget rcall"
+		error 9
+	}
+
+	* check only if called explicitly, to save time
+	if "`checkrcall'" != "" { // additional checks of dependencies
+		rcall_check stringdist>=0.9.5.1 haven>=2.1.0, r(3.2) rcall(1.3.3)
+		// 0.9.5.1 is current version of stringdist. have not tested earlier versions
+		// 2.15.3 is what stringdist authors specify as the R version required
+		// 2.1.0 is the version of haven when command was first written, seems to work
+		// 3.2 is the R version required by haven as of writing
+		// 1.3.3 is the current version of rcall. have not tested earlier versions
+		di "rcall seems to be working fine. You should be able to run rcallstringdist without issues."
+		exit
+	}
 	* parse number of variables to distinguish the two matrix cases: crossing one variable with itself, or one variable with another
 	local numvars: word count `varlist'
 	if "`matrix'" == "" & "`numvars'" == "1" {
@@ -21,26 +42,6 @@ program define rcallstringdist
 	if c(rc) {
 		di as error "You already have a variable named `generate'. Please rename it or provide a different name to option gen(varname)"
 		error 198
-	}
-
-	* confirm that rcall is installed only after all errors and conflicts checked
-	cap which rcall
-	if c(rc) {
-		di as error "The package Rcall is required for this package to work. Follow the instructions in https://github.com/haghish/rcall"
-		di as error "The following commands should work:"
-		di as error `"net install github, from("https://haghish.github.io/github/") replace"'
-		di as error "gitget rcall"
-		error 9
-	}
-	else { // additional checks of dependencies
-		rcall_check stringdist>=0.9.5.1 haven>=2.1.0, r(3.2) rcall(1.3.3)
-		// 0.9.5.1 is current version of stringdist. have not tested earlier versions
-		// 2.15.3 is what stringdist authors specify as the R version required
-		// 2.1.0 is the version of haven when command was first written, seems to work
-		// 3.2 is the R version required by haven as of writing
-		// 1.3.3 is the current version of rcall. have not tested earlier versions
-	}
-
 	}
 
 	* options and defaults to pass to stringdist in R
