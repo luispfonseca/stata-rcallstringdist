@@ -4,7 +4,7 @@
 program define rcallstringdist
 	version 14
 
-	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(integer -999) debug MATrix KEEPDUPLicates GENerate(string) SORTWords]
+	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(integer -999) debug MATrix KEEPDUPLicates GENerate(string) SORTWords ignorecase ascii whitespace punctuation clean]
 
 	* parse number of variables to distinguish the two matrix cases: crossing one variable with itself, or one variable with another
 	local numvars: word count `varlist'
@@ -123,6 +123,13 @@ program define rcallstringdist
 		di as error "Ignoring the keepduplicates option, as it applies only in the matrix method when 1 variable is passed"
 	}
 
+	if "`clean'" != "" {
+		local ignorecase "ignorecase"
+		local ascii "ascii"
+		local whitespace "whitespace"
+		local punctuation "punctuation"
+	}
+
 	tokenize "`varlist'"
 	if "`matrix'" != "" & "`numvars'" == "1" {
 		local useNames_opt = `", useNames = c("none")"'
@@ -165,7 +172,7 @@ program define rcallstringdist
 	* call R
 	di "Calling R..."
 
-	* code is repetitive to avoid multiple calls to R, which is the bottleneck
+	* code is repetitive to avoid multiple calls to R, which is the main bottleneck
 	if "`matrix'" == "" {
 		rcall vanilla: ///
 			library(stringdist); ///
@@ -174,6 +181,22 @@ program define rcallstringdist
 			rcalldata <- haven::read_dta("_Rdatarcallstrdist_in.dta"); ///
 			rcalldata\$final_1 <- rcalldata\$`1'; ///
 			rcalldata\$final_2 <- rcalldata\$`2'; ///
+			if ("`ignorecase'" != "") { ; ///
+				rcalldata\$final_1 <- tolower(rcalldata\$final_1); ///
+				rcalldata\$final_2 <- tolower(rcalldata\$final_2); ///
+			}; ///
+			if ("`ascii'" != "") { ; ///
+				rcalldata\$final_1 <- iconv(rcalldata\$final_1, from = "UTF-8", to='ASCII//TRANSLIT'); ///
+				rcalldata\$final_2 <- iconv(rcalldata\$final_2, from = "UTF-8", to='ASCII//TRANSLIT'); ///
+			}; ///
+			if ("`punctuation'" != "") { ; ///
+				rcalldata\$final_1 <- gsub('[[:punct:]]', '', rcalldata\$final_1); ///
+				rcalldata\$final_2 <- gsub('[[:punct:]]', '', rcalldata\$final_2); ///
+			}; ///
+			if ("`whitespace'" != "") { ; ///
+				rcalldata\$final_1 <- gsub("\\s+", " ", trimws(rcalldata\$final_1)); ///
+				rcalldata\$final_2 <- gsub("\\s+", " ", trimws(rcalldata\$final_2)); ///
+			}; ///
 			if ("`sortwords'" != "") { ; ///
 				library(dplyr); ///
 				library(stringr); ///
@@ -196,6 +219,22 @@ program define rcallstringdist
 			rm(rcalldata1, rcalldata2); ///
 			rcalldata\$final_1 <- rcalldata\$string1; ///
 			rcalldata\$final_2 <- rcalldata\$string2; ///
+			if ("`ignorecase'" != "") { ; ///
+				rcalldata\$final_1 <- tolower(rcalldata\$final_1); ///
+				rcalldata\$final_2 <- tolower(rcalldata\$final_2); ///
+			}; ///
+			if ("`ascii'" != "") { ; ///
+				rcalldata\$final_1 <- iconv(rcalldata\$final_1, from = "UTF-8", to='ASCII//TRANSLIT'); ///
+				rcalldata\$final_2 <- iconv(rcalldata\$final_2, from = "UTF-8", to='ASCII//TRANSLIT'); ///
+			}; ///
+			if ("`whitespace'" != "") { ; ///
+				rcalldata\$final_1 <- gsub("\\s+", " ", trimws(rcalldata\$final_1)); ///
+				rcalldata\$final_2 <- gsub("\\s+", " ", trimws(rcalldata\$final_2)); ///
+			}; ///
+			if ("`punctuation'" != "") { ; ///
+				rcalldata\$final_1 <- gsub('[[:punct:]]', '', rcalldata\$final_1); ///
+				rcalldata\$final_2 <- gsub('[[:punct:]]', '', rcalldata\$final_2); ///
+			}; ///
 			if ("`sortwords'" != "") { ; ///
 				library(dplyr); ///
 				library(stringr); ///
@@ -305,6 +344,8 @@ program define rcallstringdist
 			tempvar pair_obs
 			bysort `pair_id': gen `pair_obs' = _n
 			qui drop if `pair_obs' > 1
+
+			`hash'sort `generate' string1 string2 // see earlier comment
 		}
 
 		if "`debug'" == "" {
