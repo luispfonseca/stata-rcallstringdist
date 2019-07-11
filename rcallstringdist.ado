@@ -4,7 +4,7 @@
 program define rcallstringdist
 	version 14
 
-	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(integer -999) debug MATrix DUPLicates GENerate(string) SORTWords]
+	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(integer -999) debug MATrix KEEPDUPLicates GENerate(string) SORTWords]
 
 	* parse number of variables to distinguish the two matrix cases: crossing one variable with itself, or one variable with another
 	local numvars: word count `varlist'
@@ -17,7 +17,7 @@ program define rcallstringdist
 	if "`generate'" == "" {
 		local generate "strdist"
 	}
-	capture confirm new variable `generate'
+	cap confirm new variable `generate'
 	if c(rc) {
 		di as error "You already have a variable named `generate'. Please rename it or provide a different name to option gen(varname)"
 		error 198
@@ -33,17 +33,19 @@ program define rcallstringdist
 		error 9
 	}
 	else { // additional checks of dependencies
-		rcall_check stringdist>=0.9.5.1, r(2.15.3) rcall(1.3.3)
+		rcall_check stringdist>=0.9.5.1 haven>=2.1.0, r(3.2) rcall(1.3.3)
 		// 0.9.5.1 is current version of stringdist. have not tested earlier versions
 		// 2.15.3 is what stringdist authors specify as the R version required
+		// 2.1.0 is the version of haven when command was first written, seems to work
+		// 3.2 is the R version required by haven as of writing
 		// 1.3.3 is the current version of rcall. have not tested earlier versions
 	}
 
-	* confirm commands used for sortwords are installed
+	* check additional R packages for the sortwords option
 	if "`sortwords'" != "" {
-		cap which rowsort
+		cap noi rcall_check dplyr>=0.8.0 stringr>=1.4.0
 		if c(rc) {
-			di as error "You need to install rowsort for the sortwords option. There are two rowsort packages available, and only one allows the use of strings. To install that one, run {bf:net install pr0046.pkg}"
+			di as error `"The R packages dplyr and stringr are required to use the sortwords option. Please install them using "install.package('package_name')" in an R console"'
 			error
 		}
 	}
@@ -117,46 +119,23 @@ program define rcallstringdist
 		local nthread_opt = ", nthread = `nthread'"
 	}
 
-	if "`duplicates'" != "" & ("`matrix'" == "" | "`numvars'" == "2") {
-		di as error "Ignoring the duplicates option, as it applies only in the matrix method when 1 variable is passed"
+	if "`keepduplicates'" != "" & ("`matrix'" != "" & "`numvars'" == "1") {
+		di as error "Ignoring the keepduplicates option, as it applies only in the matrix method when 1 variable is passed"
 	}
 
-
-	* prepare list of unique names to send; use gduplicates if possible
 	tokenize "`varlist'"
 	if "`matrix'" != "" & "`numvars'" == "1" {
 		local useNames_opt = `", useNames = c("none")"'
 		local 2 = "`1'"
-		* qui use "`origdata'", clear // not needed if no changes introduced after saving
 	}
-	di as result "Preparing data to send to R"
 
+	di "Preparing data to send to R"
+
+	* prepare list to send; use gduplicates if possible
 	cap which gtools
 	if !c(rc) {
 		local g "g"
 		local hash "hash"
-	}
-	qui `g'duplicates drop
-
-	* sort words inside each string
-	if "`sortwords'" != "" {
-		tokenize "`varlist'"
-		forvalues k = 1/`numvars' {
-			qui split ``k'', g(__stringsplit1_)
-			unab x : __stringsplit1_*
-			local numwords: word count `x'
-			cap rowsort __stringsplit1_*, gen(___stringsplit1_s1-___stringsplit1_s`numwords')
-			if c(rc) {
-				di as error "The version of rowsort you have installed does not allow the use of strings. Install a version that does by running {bf:net install pr0046}"
-				error
-			}
-			unab x : ___stringsplit1_s*
-			tempvar finalstring`k'
-			egen X___finalstring`k' = concat(`x'), punct(" ")
-			drop ___stringsplit1_s*  __stringsplit1_*
-		}
-		local 1 X___finalstring1
-		local 2 X___finalstring`numvars' //need the X as R doesn't take variables starting with _
 	}
 
 	* store dataset to later merge, or restore if error
@@ -168,40 +147,66 @@ program define rcallstringdist
 	* no need importing a large vector with empty strings, which will make the matrix large
 	if "`matrix'" == "" {
 		keep `1' `2'
-		qui export delimited _Rdatarcallstrdist_in.csv, replace
+		qui `g'duplicates drop
+		qui save _Rdatarcallstrdist_in.dta, replace
 	}
-	else {
+	else if "`matrix'" != "" {
 		keep `1'
 		qui drop if mi(`1')
-		qui export delimited _Rdatarcallstrdist_in_1.csv, replace
+		qui `g'duplicates drop
+		qui save _Rdatarcallstrdist_in_1.dta, replace
 		use "`origdata'", clear
 		keep `2'
 		qui drop if mi(`2')
-		qui export delimited _Rdatarcallstrdist_in_2.csv, replace
+		qui `g'duplicates drop
+		qui save _Rdatarcallstrdist_in_2.dta, replace
 	}
 
 	* call R
-	di as result "Calling R..."
+	di "Calling R..."
+
+	* code is repetitive to avoid multiple calls to R, which is the bottleneck
 	if "`matrix'" == "" {
-		cap noi rcall vanilla: ///
+		rcall vanilla: ///
 			library(stringdist); ///
+			library(haven); ///
 			print(paste0("Using stringdist package version: ", packageVersion("stringdist"))); ///
-			rcalldata <- read.csv("_Rdatarcallstrdist_in.csv", fileEncoding = "utf8", na.strings = ""); ///
-			rcalldata\$`generate' <- stringdist(rcalldata\$`1',rcalldata\$`2', method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt'); ///
-			write.csv(rcalldata, file= "_Rdatarcallstrdist_out.csv", row.names=FALSE, fileEncoding="utf8", na = ""); ///
-			rm(list=ls())
+			rcalldata <- haven::read_dta("_Rdatarcallstrdist_in.dta"); ///
+			rcalldata\$final_1 <- rcalldata\$`1'; ///
+			rcalldata\$final_2 <- rcalldata\$`2'; ///
+			if ("`sortwords'" != "") { ; ///
+				library(dplyr); ///
+				library(stringr); ///
+				rcalldata\$final_1 <- rcalldata\$final_1 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
+				rcalldata\$final_2 <- rcalldata\$final_2 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
+				}; ///
+			rcalldata\$`generate' <- c(stringdist(rcalldata\$final_1, rcalldata\$final_2, method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt')); ///
+			haven::write_dta(rcalldata, "_Rdatarcallstrdist_out.dta"); ///
+			rm(rcalldata)
 	}
-	else { // need to separate rcall for matrix option as this one is saving the data in a slightly different way and I can't add a $ to a local macro in Stata to make the code flexbile enough for both cases
+	else if "`matrix'" != "" { // need to separate rcall for matrix option as this one is saving the data in a slightly different way and I can't add a $ to a local macro in Stata to make the code flexbile enough for both cases
 		// I get some error, likely due to rcall (as code runs fine in R): "too few quotes". but output goes through anyway. error 132
-		cap noi rcall vanilla: ///
+		rcall vanilla: ///
 			library(stringdist); ///
+			library(haven); ///
 			print(paste0("Using stringdist package version: ", packageVersion("stringdist"))); ///
-			rcalldata1 <- read.csv("_Rdatarcallstrdist_in_1.csv", fileEncoding = "utf8", na.strings = ""); ///
-			rcalldata2 <- read.csv("_Rdatarcallstrdist_in_2.csv", fileEncoding = "utf8", na.strings = ""); ///
-			dataout <- stringdistmatrix(rcalldata1\$`1', rcalldata2\$`2', method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt', useNames = c("none") `nthread_opt'); ///
-			write.csv(c(dataout), file= "_Rdatarcallstrdist_out.csv", row.names=FALSE, fileEncoding="utf8", na = ""); ///
-			rm(list=ls())
-	}
+			rcalldata1 <- haven::read_dta("_Rdatarcallstrdist_in_1.dta"); ///
+			rcalldata2 <- haven::read_dta("_Rdatarcallstrdist_in_2.dta"); ///
+			rcalldata <- expand.grid(string1 = rcalldata1\$`1', string2 = rcalldata2\$`2', stringsAsFactors = FALSE); ///
+			rm(rcalldata1, rcalldata2); ///
+			rcalldata\$final_1 <- rcalldata\$string1; ///
+			rcalldata\$final_2 <- rcalldata\$string2; ///
+			if ("`sortwords'" != "") { ; ///
+				library(dplyr); ///
+				library(stringr); ///
+				rcalldata\$final_1 <- rcalldata\$final_1 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
+				rcalldata\$final_2 <- rcalldata\$final_2 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
+				}; ///
+			rcalldata\$`generate' <- c(stringdist(rcalldata\$final_1, rcalldata\$final_2, method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt')); ///
+			haven::write_dta(rcalldata, "_Rdatarcallstrdist_out.dta"); ///
+			rm(rcalldata)
+		}
+
 	if c(rc) > 0 {
 		di as error "Error when calling R. Check the error message above"
 		di as error "Restoring original data"
@@ -210,127 +215,83 @@ program define rcallstringdist
 		error 
 	}
 	if "`debug'" == "" {
-		cap erase _Rdatarcallstrdist_in.csv
-		cap erase _Rdatarcallstrdist_in_1.csv
-		cap erase _Rdatarcallstrdist_in_2.csv
-		cap erase stata.output // due to error 132
+		cap erase _Rdatarcallstrdist_in.dta
+		cap erase _Rdatarcallstrdist_in_1.dta
+		cap erase _Rdatarcallstrdist_in_2.dta
 	}
+
+	* merge results
+	di "Merging the data"
+	qui use "`origdata'", clear
 
 	* treat data not in the case of matrix
 	if "`matrix'" == "" {
-		capture confirm file _Rdatarcallstrdist_out.csv
+		cap confirm file _Rdatarcallstrdist_out.dta
 		if c(rc) {
 			di as error "Restoring original data because file with the converted data was not found. Report to https://github.com/luispfonseca/stata-rcallstringdist/issues"
 			qui use "`origdata'", clear
 			cap erase "`origdata'"
 			error 601
 		}
-		qui import delimited _Rdatarcallstrdist_out.csv, clear encoding("utf-8") varnames(1) case(preserve) rowrange(1:)
-		if "`debug'" == "" {
-			cap erase _Rdatarcallstrdist_out.csv
-		}
-
-		* store in dta file
-		qui `g'duplicates drop
-		qui	save _Rdatarcallstrdist_instata, replace
-
-		* merge results
-		di as result "Merging the data"
-		qui use "`origdata'", clear
 
 		tempvar numobs
 		gen `numobs' = _n
-		qui merge m:1 `1' `2' using _Rdatarcallstrdist_instata, keepusing(`generate')
-
-		if "`debug'" == "" {
-			cap erase _Rdatarcallstrdist_instata.dta
-		}
+		tempvar rcallstringdist_merge
+		qui merge m:1 `1' `2' using _Rdatarcallstrdist_out.dta, keepusing(`generate') gen(`rcallstringdist_merge')
+		qui compress `generate'
 
 		* check merging occurred as expected
-		cap assert _merge == 3
+		cap assert `rcallstringdist_merge' == 3
 		if c(rc) == 9 { // more helpful message if assertion fails
+			list if !(_merge == 3)
 			di as error "Merging of data did not work as expected. Please provide a minimal working example at https://github.com/luispfonseca/stata-rcallstrdist/issues"
-			di as error "There was a problem with these entries:"
-			tab `namevar' if !(_merge == 3)
+			di as error "There was a problem with the entries listed above"
 			di as error "Restoring original data"
 			qui use "`origdata'", clear
 			cap erase "`origdata'"
 			error 9
 		}
 
-		drop _merge
-
 		* restore original sort destroyed by calling merge
 		sort `numobs'
 		cap erase "`origdata'"
 	}
-	else { // matrix option
-		* import the csv (moved away from st.load() due to issues with encodings and accents (issue #1 rcallcountrycode))
-		capture confirm file _Rdatarcallstrdist_out.csv
+	else if "`matrix'" != "" { // matrix option
+		cap confirm file _Rdatarcallstrdist_out.dta
 		if c(rc) {
 			di as error "Restoring original data because file with the converted data was not found. Report to https://github.com/luispfonseca/stata-rcallstringdist/issues"
 			qui use "`origdata'", clear
 			cap erase "`origdata'"
 			error 601
 		}
-		qui import delimited _Rdatarcallstrdist_out.csv, clear encoding("utf-8") varnames(1) case(preserve) rowrange(1:)
-		if "`debug'" == "" {
-			cap erase _Rdatarcallstrdist_out.csv
+
+		qui use _Rdatarcallstrdist_out, clear
+
+		* imported dataset unfortunately changes string formatting. this is a workaround
+		forvalues k = 1/2 {
+			tempvar length`k'
+			qui gen length`k' = length(string`k')
+			qui sum length`k'
+			format string`k' %`r(max)'s
+			drop length`k'
 		}
 
-		* merge results
-		di as result "Merging the data"
-
-		* store in dta file
-		gen long obsnum = _n
-		qui	save _Rdatarcallstrdist_instata, replace
-
-		qui use "`origdata'", clear
-		tokenize "`varlist'"
-		if "`numvars'" == "1" {
-			local 2 `1'
+		if "`numvars'" == "2" {
+			rename string1 `1'
+			rename string2 `2'
+			keep `1' `2' `generate'
+			`hash'sort `generate' `1' `2' // sorting is hard-coded to make it clear for users that, with matrix option, they should not expect the command to give him back the same order of strings they fed in, as duplicates and missing strings are dropped in the matrix option
 		}
-		keep `1' `2'
-
-		*qui `g'duplicates drop
-		tempfile strings
-		qui save "`strings'", replace
-
-		keep `1'
-		qui drop if mi(`1')
-		rename `1' string1
-		tempvar strnum1
-		gen `strnum1' = _n
-		tempfile cross
-		qui save "`cross'", replace
-		qui use "`strings'", clear
-		keep `2'
-		qui drop if mi(`2')
-		tempvar strnum2
-		gen `strnum2' = _n
-		rename `2' string2
-		cross using "`cross'"
-		sort `strnum2' `strnum1'
-
-		gen long obsnum = _n
-		qui merge 1:1 obsnum using _Rdatarcallstrdist_instata, assert(match) nogen
-		qui drop if mi(x)
-		if "`debug'" == "" {
-			cap erase _Rdatarcallstrdist_instata.dta
-			cap erase "`cross'"
-			cap erase "`strings'"
-
-		}
-		rename x `generate'
-		drop obsnum
-
-		order *1 *2 `generate'
-
-		if "`numvars'" == "1" {
+		else if "`numvars'" == "1" {
+			tokenize `varlist'
+			local 2 = "`1'"
+			keep string1 string2 `generate'
 			qui drop if string1 == string2
+			`hash'sort `generate' string1 string2 // see earlier comment
 		}
 
-		if "`duplicates'" == "" | "`numvars'" == "2" {
+		* remove duplicates if keepduplicates not called and we have one variable
+		if "`keepduplicates'" == "" & "`numvars'" == "1" {
 
 			tempvar first second
 			gen `first' = cond(string1 < string2, string1, string2)
@@ -346,11 +307,13 @@ program define rcallstringdist
 			qui drop if `pair_obs' > 1
 		}
 
-		`hash'sort `generate' string1 string2 // sorting is hard-coded to make it clear for users that, with matrix option, they should not expect the command to give him back the same order of strings they fed in, as duplicates and missing strings are dropped in the matrix option
+		if "`debug'" == "" {
+			cap erase _Rdatarcallstrdist_out.dta
+			cap erase "`cross'"
+			cap erase "`strings'"
+		}
 
 		qui compress
 	}
-
-	cap drop X___finalstring* // in the sortwords option
 
 end
