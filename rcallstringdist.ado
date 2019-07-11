@@ -153,10 +153,10 @@ program define rcallstringdist
 		qui drop if mi(`1')
 		qui `g'duplicates drop
 		qui save _Rdatarcallstrdist_in_1.dta, replace
-		if "`numvars'" == 1 {
+		if "`numvars'" == "1" {
 			qui save _Rdatarcallstrdist_in_2.dta, replace
 		}
-		else if "`numvars'" == 2 {
+		else if "`numvars'" == "2" {
 			use "`origdata'", clear
 			keep `2'
 			qui drop if mi(`2')
@@ -199,7 +199,7 @@ program define rcallstringdist
 			}; ///
 			rcalldata\$`generate' <- c(stringdist(rcalldata\$final_1, rcalldata\$final_2, method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt')); ///
 			haven::write_dta(rcalldata, "_Rdatarcallstrdist_out.dta"); ///
-			rm(rcalldata)
+			rm(list=ls())
 	}
 	else if "`matrix'" != "" { // need to separate rcall for matrix option as this one is saving the data in a slightly different way and I can't add a $ to a local macro in Stata to make the code flexbile enough for both cases
 		// I get some error, likely due to rcall (as code runs fine in R): "too few quotes". but output goes through anyway. error 132
@@ -209,35 +209,32 @@ program define rcallstringdist
 			print(paste0("Using stringdist package version: ", packageVersion("stringdist"))); ///
 			rcalldata1 <- haven::read_dta("_Rdatarcallstrdist_in_1.dta"); ///
 			rcalldata2 <- haven::read_dta("_Rdatarcallstrdist_in_2.dta"); ///
-			rcalldata <- expand.grid(string1 = rcalldata1\$`1', string2 = rcalldata2\$`2', stringsAsFactors = FALSE); ///
-			rm(rcalldata1, rcalldata2); ///
-			rcalldata\$final_1 <- rcalldata\$string1; ///
-			rcalldata\$final_2 <- rcalldata\$string2; ///
+			rcalldata1\$final_1 <- rcalldata1\$`1'; ///
+			rcalldata2\$final_2 <- rcalldata2\$`2'; ///
 			if ("`ignorecase'" != "") { ; ///
-				rcalldata\$final_1 <- tolower(rcalldata\$final_1); ///
-				rcalldata\$final_2 <- tolower(rcalldata\$final_2); ///
+				rcalldata1\$final_1 <- tolower(rcalldata1\$final_1); ///
+				rcalldata2\$final_2 <- tolower(rcalldata2\$final_2); ///
 			}; ///
 			if ("`ascii'" != "") { ; ///
-				rcalldata\$final_1 <- iconv(rcalldata\$final_1, from = "UTF-8", to='ASCII//TRANSLIT'); ///
-				rcalldata\$final_2 <- iconv(rcalldata\$final_2, from = "UTF-8", to='ASCII//TRANSLIT'); ///
+				rcalldata1\$final_1 <- iconv(rcalldata1\$final_1, from = "UTF-8", to='ASCII//TRANSLIT'); ///
+				rcalldata2\$final_2 <- iconv(rcalldata2\$final_2, from = "UTF-8", to='ASCII//TRANSLIT'); ///
 			}; ///
 			if ("`whitespace'" != "") { ; ///
-				rcalldata\$final_1 <- gsub("\\s+", " ", trimws(rcalldata\$final_1)); ///
-				rcalldata\$final_2 <- gsub("\\s+", " ", trimws(rcalldata\$final_2)); ///
+				rcalldata1\$final_1 <- gsub("\\s+", " ", trimws(rcalldata1\$final_1)); ///
+				rcalldata2\$final_2 <- gsub("\\s+", " ", trimws(rcalldata2\$final_2)); ///
 			}; ///
 			if ("`punctuation'" != "") { ; ///
-				rcalldata\$final_1 <- gsub('[[:punct:]]', '', rcalldata\$final_1); ///
-				rcalldata\$final_2 <- gsub('[[:punct:]]', '', rcalldata\$final_2); ///
+				rcalldata1\$final_1 <- gsub('[[:punct:]]', '', rcalldata1\$final_1); ///
+				rcalldata2\$final_2 <- gsub('[[:punct:]]', '', rcalldata2\$final_2); ///
 			}; ///
 			if ("`sortwords'" != "") { ; ///
-				library(dplyr); ///
-				library(stringr); ///
-				rcalldata\$final_1 <- rcalldata\$final_1 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
-				rcalldata\$final_2 <- rcalldata\$final_2 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
+				rcalldata1\$final_1 <- unlist(lapply(lapply(strsplit(rcalldata1\$final_1, ' '), 'sort'), 'paste', collapse=' ')); ///
+				rcalldata2\$final_2 <- unlist(lapply(lapply(strsplit(rcalldata2\$final_2, ' '), 'sort'), 'paste', collapse=' ')); ///
 			}; ///
-			rcalldata\$`generate' <- c(stringdist(rcalldata\$final_1, rcalldata\$final_2, method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt')); ///
+			rcalldata      <- expand.grid(string1 = rcalldata1\$`1'    , string2 = rcalldata2\$`2'        , stringsAsFactors = FALSE); ///
+			rcalldata\$`generate' <- c(stringdistmatrix(rcalldata1\$final_1, rcalldata2\$final_2, method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt')); ///
 			haven::write_dta(rcalldata, "_Rdatarcallstrdist_out.dta"); ///
-			rm(rcalldata)
+			rm(list=ls())
 	}
 
 	if c(rc) > 0 {
