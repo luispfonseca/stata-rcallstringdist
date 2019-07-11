@@ -41,13 +41,6 @@ program define rcallstringdist
 		// 1.3.3 is the current version of rcall. have not tested earlier versions
 	}
 
-	* check additional R packages for the sortwords option
-	if "`sortwords'" != "" {
-		cap noi rcall_check dplyr>=0.8.0 stringr>=1.4.0
-		if c(rc) {
-			di as error `"The R packages dplyr and stringr are required to use the sortwords option. Please install them using "install.package('package_name')" in an R console"'
-			error
-		}
 	}
 
 	* options and defaults to pass to stringdist in R
@@ -198,10 +191,8 @@ program define rcallstringdist
 				rcalldata\$final_2 <- gsub("\\s+", " ", trimws(rcalldata\$final_2)); ///
 			}; ///
 			if ("`sortwords'" != "") { ; ///
-				library(dplyr); ///
-				library(stringr); ///
-				rcalldata\$final_1 <- rcalldata\$final_1 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
-				rcalldata\$final_2 <- rcalldata\$final_2 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
+				rcalldata\$final_1 <- unlist(lapply(lapply(strsplit(rcalldata\$final_1, ' '), 'sort'), 'paste', collapse=' ')); ///
+				rcalldata\$final_2 <- unlist(lapply(lapply(strsplit(rcalldata\$final_2, ' '), 'sort'), 'paste', collapse=' ')); ///
 				}; ///
 			rcalldata\$`generate' <- c(stringdist(rcalldata\$final_1, rcalldata\$final_2, method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt')); ///
 			haven::write_dta(rcalldata, "_Rdatarcallstrdist_out.dta"); ///
