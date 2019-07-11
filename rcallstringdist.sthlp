@@ -1,5 +1,5 @@
 {smcl}
-{* *! version 0.2.3 13jun2019}{...}
+{* *! version 0.3.0 11jul2019}{...}
 {findalias asfradohelp}{...}
 {vieweralsosee "" "--"}{...}
 {vieweralsosee "[R] help" "help help"}{...}
@@ -28,13 +28,19 @@ Options to pass to stringdist in R:
 {synopt:{opt bt}}Winkler's boost threshold{p_end}
 {synopt:{opt usebytes}}Pass {opt useBytes} option to R{p_end}
 {synopt:{opt nthread}}Pass {opt nthread} argument to R{p_end}
-{synopt:{opt mat:rix}}Compare all possible pairs of strings. {bf:This option clears your working dataset from memory}{p_end}
+{synopt:{opt mat:rix}}Compares all possible pairs of strings between two variables or within a single variable. {bf:Warning! This option clears your working dataset from memory}{p_end}
 {synoptline}
 Additional options
-{synopt:{opt dup:licates}}Keeps both orderings of permuations with {opt matrix} and 1 variable passed (e.g. A with B and B with A){p_end}
+{synopt:{opt keepdup:licates}}Keeps both orderings of permuations ((A,B) and (B,A)) when {opt matrix} is called with 1 variable passed{p_end}
 {synopt:{opt gen:erate}}Name of new variable to store string distance values{p_end}
-{synopt:{opt sortw:ords}}Sort words alphabetically within each string before comparing{p_end}
+{synopt:{opt ascii}}Converts to ascii before comparing to eliminate diacritics (e.g. é becomes e){p_end}
+{synopt:{opt ignorecase}}Converts every character to lower case before comparing{p_end}
+{synopt:{opt whitespace}}Removes excess whitespace before comparing{p_end}
+{synopt:{opt punct:uation}}Removes punctuation before comparing{p_end}
+{synopt:{opt cl:ean}}Applies the {opt ascii}, {opt ignorecase}, {opt whitespace} and {opt punctuation} options before comparing{p_end}
+{synopt:{opt sortw:ords}}Sorts words alphabetically within each string before comparing{p_end}
 {synopt:{opt debug}}Keeps intermediate files to help debug{p_end}
+{synopt:{opt check:rcall}}Runs rcall_check to ensure rcall is working correctly and the required R packages are installed{p_end}
 {synoptline}
 {p2colreset}{...}
 
@@ -141,9 +147,9 @@ rcallstringdist nameA nameB, matrix
 *** we have 5 unique strings, 5x4/2=10 combinations
 use example_dataset, clear
 rcallstringdist nameA, matrix
-*** to keep all permutations (5x4=20), we can use the duplicates option
+*** to keep all permutations (5x4=20), we can use the keepduplicates option
 use example_dataset, clear
-rcallstringdist nameA, matrix duplicates
+rcallstringdist nameA, matrix keepduplicates
 
 
 {title:Author}

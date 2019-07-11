@@ -4,7 +4,7 @@
 program define rcallstringdist
 	version 14
 
-	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(integer -999) debug MATrix KEEPDUPLicates GENerate(string) SORTWords ignorecase ascii whitespace PUNCTuation CLean CHECKrcall]
+	syntax varlist(min=1 max=2 string), [Method(string) usebytes Weight(numlist max=4 min=4 <=1) q(integer -999) p(numlist min=1 max=1 >=0 <=0.25) bt(numlist max=1 min=1) nthread(integer -999) debug MATrix KEEPDUPLicates GENerate(string) SORTWords ascii ignorecase whitespace PUNCTuation CLean CHECKrcall]
 
 	* confirm that rcall is installed only after all errors and conflicts checked
 	cap which rcall
@@ -177,13 +177,13 @@ program define rcallstringdist
 			rcalldata <- haven::read_dta("_Rdatarcallstrdist_in.dta"); ///
 			rcalldata\$final_1 <- rcalldata\$`1'; ///
 			rcalldata\$final_2 <- rcalldata\$`2'; ///
-			if ("`ignorecase'" != "") { ; ///
-				rcalldata\$final_1 <- tolower(rcalldata\$final_1); ///
-				rcalldata\$final_2 <- tolower(rcalldata\$final_2); ///
-			}; ///
 			if ("`ascii'" != "") { ; ///
 				rcalldata\$final_1 <- iconv(rcalldata\$final_1, from = "UTF-8", to='ASCII//TRANSLIT'); ///
 				rcalldata\$final_2 <- iconv(rcalldata\$final_2, from = "UTF-8", to='ASCII//TRANSLIT'); ///
+			}; ///
+			if ("`ignorecase'" != "") { ; ///
+				rcalldata\$final_1 <- tolower(rcalldata\$final_1); ///
+				rcalldata\$final_2 <- tolower(rcalldata\$final_2); ///
 			}; ///
 			if ("`punctuation'" != "") { ; ///
 				rcalldata\$final_1 <- gsub('[[:punct:]]', '', rcalldata\$final_1); ///
@@ -211,13 +211,13 @@ program define rcallstringdist
 			rcalldata2 <- haven::read_dta("_Rdatarcallstrdist_in_2.dta"); ///
 			rcalldata1\$final_1 <- rcalldata1\$`1'; ///
 			rcalldata2\$final_2 <- rcalldata2\$`2'; ///
-			if ("`ignorecase'" != "") { ; ///
-				rcalldata1\$final_1 <- tolower(rcalldata1\$final_1); ///
-				rcalldata2\$final_2 <- tolower(rcalldata2\$final_2); ///
-			}; ///
 			if ("`ascii'" != "") { ; ///
 				rcalldata1\$final_1 <- iconv(rcalldata1\$final_1, from = "UTF-8", to='ASCII//TRANSLIT'); ///
 				rcalldata2\$final_2 <- iconv(rcalldata2\$final_2, from = "UTF-8", to='ASCII//TRANSLIT'); ///
+			}; ///
+			if ("`ignorecase'" != "") { ; ///
+				rcalldata1\$final_1 <- tolower(rcalldata1\$final_1); ///
+				rcalldata2\$final_2 <- tolower(rcalldata2\$final_2); ///
 			}; ///
 			if ("`whitespace'" != "") { ; ///
 				rcalldata1\$final_1 <- gsub("\\s+", " ", trimws(rcalldata1\$final_1)); ///
@@ -294,7 +294,7 @@ program define rcallstringdist
 		* imported dataset unfortunately changes string formatting. this is a workaround
 		forvalues k = 1/2 {
 			tempvar length`k'
-			qui gen length`k' = length(string`k')
+			qui gen byte length`k' = length(string`k')
 			qui sum length`k'
 			format string`k' %`r(max)'s
 			drop length`k'

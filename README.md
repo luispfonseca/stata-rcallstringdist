@@ -1,10 +1,14 @@
 # RCALLSTRINGDIST: Call R's stringdist package from Stata using rcall
-- Current version: 0.2.3 12jun2019
-- Contents: [`updates`](#updates) [`description`](#description) [`install`](#install) [`usage`](#usage) [`to do`](#to-do) [`author`](#author)
+- Current version: 0.3.0 11jul2019
+- Contents: [`updates`](#updates) [`description`](#description) [`install`](#install) [`usage`](#usage)  [`author`](#author)
 
 -----------
 
 ## Major updates
+* **0.3.0 11jul2019**:
+	- adds additional options to clean strings before comparison (ignorecase, ascii, whitespace, punctuation)
+	- moved handling out of csv and into .dta files (faster when merging with original data) using R package haven (appears better at handling diacritics than readstata13)
+	- small speed improvements
 * **0.2.0 16apr2019**:
 	- adds several options: matrix (for one and two variables), duplicates, and sortwords
 	- (0.2.3) significant increases in speed 
@@ -32,15 +36,16 @@ github install luispfonseca/stata-rcallstringdist
 ```
 
 ### Dependencies
-This Stata package requires R, the [`stringdist`](https://github.com/markvanderloo/stringdist) R package, and the [`rcall`](https://github.com/haghish/rcall) Stata package. 
+This Stata package requires R, the [`stringdist`](https://github.com/markvanderloo/stringdist) and [`haven`](https://github.com/tidyverse/haven) R packages, and the [`rcall`](https://github.com/haghish/rcall) Stata package. 
 
-Additional (but not always required) dependencies:
-- The command `rowsort` (`net install pr0046.pkg`) is needed when the `sortwords` option is called. 
+Optional dependencies:
 - Commands from [`gtools`](https://github.com/mcaceresb/stata-gtools) by Mauricio Caceres Bravo are used to speed up the command when available.
 
 If R is installed on your machine, all these dependencies will be automatically installed when following the earlier instrutions. The file [_dependency.do_](https://github.com/luispfonseca/stata-rcallstringdist/blob/master/dependency.do) is executed automatically after installing `rcallstringdist` package. __Make sure R is installed on your machine before you attempt to install these packages on Stata__. 
 
 ## Usage
+See the help file in Stata for details about each option.
+
 ``` stata
 * Comparing two lists of strings
 clear
@@ -110,14 +115,10 @@ rcallstringdist nameA nameB, matrix
 *** we have 5 unique strings, 5x4/2=10 combinations
 use example_dataset, clear
 rcallstringdist nameA, matrix
-*** to keep all permutations (5x4=20), we can use the duplicates option
+*** to keep all permutations (5x4=20), we can use the keepduplicates option
 use example_dataset, clear
-rcallstringdist nameA, matrix duplicates
+rcallstringdist nameA, matrix keepduplicates
 ```
-
-## To do:
-* suggestions?
-
 ## Author
 Luís Fonseca
 <br>London Business School

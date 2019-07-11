@@ -1,4 +1,4 @@
-v 0.2.3
+v 0.3.0
 d Materials by Luís Fonseca
 d lfonseca@london.edu
 
