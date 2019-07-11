@@ -1,4 +1,4 @@
-*! version 0.2.3 13jun2019 Luís Fonseca, https://github.com/luispfonseca
+*! version 0.3.0 11jul2019 Luís Fonseca, https://github.com/luispfonseca
 *! -rcallstringdist- Call R's stringdist package from Stata using rcall
 
 program define rcallstringdist
@@ -15,7 +15,6 @@ program define rcallstringdist
 		di as error "gitget rcall"
 		error 9
 	}
-
 	* check only if called explicitly, to save time
 	if "`checkrcall'" != "" { // additional checks of dependencies
 		rcall_check stringdist>=0.9.5.1 haven>=2.1.0, r(3.2) rcall(1.3.3)
@@ -27,14 +26,14 @@ program define rcallstringdist
 		di "rcall seems to be working fine. You should be able to run rcallstringdist without issues."
 		exit
 	}
-	* parse number of variables to distinguish the two matrix cases: crossing one variable with itself, or one variable with another
+
+	* parse rcallstringdist options
 	local numvars: word count `varlist'
 	if "`matrix'" == "" & "`numvars'" == "1" {
 		di as error "You only passed one variable but did not specify the matrix option."
 		error 198
 	}
 
-	* avoid naming conflicts
 	if "`generate'" == "" {
 		local generate "strdist"
 	}
@@ -42,6 +41,23 @@ program define rcallstringdist
 	if c(rc) {
 		di as error "You already have a variable named `generate'. Please rename it or provide a different name to option gen(varname)"
 		error 198
+	}
+
+	if "`keepduplicates'" != "" & ("`matrix'" != "" & "`numvars'" == "1") {
+		di as error "Ignoring the keepduplicates option, as it applies only in the matrix method when 1 variable is passed"
+	}
+
+	if "`clean'" != "" {
+		local ignorecase "ignorecase"
+		local ascii "ascii"
+		local whitespace "whitespace"
+		local punctuation "punctuation"
+	}
+
+	tokenize "`varlist'"
+	if "`matrix'" != "" & "`numvars'" == "1" {
+		local useNames_opt = `", useNames = c("none")"'
+		local 2 = "`1'"
 	}
 
 	* options and defaults to pass to stringdist in R
@@ -113,26 +129,8 @@ program define rcallstringdist
 		local nthread_opt = ", nthread = `nthread'"
 	}
 
-	if "`keepduplicates'" != "" & ("`matrix'" != "" & "`numvars'" == "1") {
-		di as error "Ignoring the keepduplicates option, as it applies only in the matrix method when 1 variable is passed"
-	}
-
-	if "`clean'" != "" {
-		local ignorecase "ignorecase"
-		local ascii "ascii"
-		local whitespace "whitespace"
-		local punctuation "punctuation"
-	}
-
-	tokenize "`varlist'"
-	if "`matrix'" != "" & "`numvars'" == "1" {
-		local useNames_opt = `", useNames = c("none")"'
-		local 2 = "`1'"
-	}
-
 	di "Preparing data to send to R"
 
-	* prepare list to send; use gduplicates if possible
 	cap which gtools
 	if !c(rc) {
 		local g "g"
@@ -144,8 +142,7 @@ program define rcallstringdist
 	qui save "`origdata'", replace
 
 	* for case of matrix separate the two variables when exporting.
-	* this can save a lot of time and space when the two lists have different sizes
-	* no need importing a large vector with empty strings, which will make the matrix large
+	* avoids importing large vector with empty strings
 	if "`matrix'" == "" {
 		keep `1' `2'
 		qui `g'duplicates drop
@@ -156,11 +153,16 @@ program define rcallstringdist
 		qui drop if mi(`1')
 		qui `g'duplicates drop
 		qui save _Rdatarcallstrdist_in_1.dta, replace
-		use "`origdata'", clear
-		keep `2'
-		qui drop if mi(`2')
-		qui `g'duplicates drop
-		qui save _Rdatarcallstrdist_in_2.dta, replace
+		if "`numvars'" == 1 {
+			qui save _Rdatarcallstrdist_in_2.dta, replace
+		}
+		else if "`numvars'" == 2 {
+			use "`origdata'", clear
+			keep `2'
+			qui drop if mi(`2')
+			qui `g'duplicates drop
+			qui save _Rdatarcallstrdist_in_2.dta, replace
+		}
 	}
 
 	* call R
@@ -168,7 +170,7 @@ program define rcallstringdist
 
 	* code is repetitive to avoid multiple calls to R, which is the main bottleneck
 	if "`matrix'" == "" {
-		rcall vanilla: ///
+		cap noi rcall vanilla: ///
 			library(stringdist); ///
 			library(haven); ///
 			print(paste0("Using stringdist package version: ", packageVersion("stringdist"))); ///
@@ -194,14 +196,14 @@ program define rcallstringdist
 			if ("`sortwords'" != "") { ; ///
 				rcalldata\$final_1 <- unlist(lapply(lapply(strsplit(rcalldata\$final_1, ' '), 'sort'), 'paste', collapse=' ')); ///
 				rcalldata\$final_2 <- unlist(lapply(lapply(strsplit(rcalldata\$final_2, ' '), 'sort'), 'paste', collapse=' ')); ///
-				}; ///
+			}; ///
 			rcalldata\$`generate' <- c(stringdist(rcalldata\$final_1, rcalldata\$final_2, method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt')); ///
 			haven::write_dta(rcalldata, "_Rdatarcallstrdist_out.dta"); ///
 			rm(rcalldata)
 	}
 	else if "`matrix'" != "" { // need to separate rcall for matrix option as this one is saving the data in a slightly different way and I can't add a $ to a local macro in Stata to make the code flexbile enough for both cases
 		// I get some error, likely due to rcall (as code runs fine in R): "too few quotes". but output goes through anyway. error 132
-		rcall vanilla: ///
+		cap noi rcall vanilla: ///
 			library(stringdist); ///
 			library(haven); ///
 			print(paste0("Using stringdist package version: ", packageVersion("stringdist"))); ///
@@ -232,11 +234,11 @@ program define rcallstringdist
 				library(stringr); ///
 				rcalldata\$final_1 <- rcalldata\$final_1 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
 				rcalldata\$final_2 <- rcalldata\$final_2 %>% str_split(., ' ') %>% lapply(., 'sort') %>%  lapply(., 'paste', collapse=' ') %>% unlist(.); ///
-				}; ///
+			}; ///
 			rcalldata\$`generate' <- c(stringdist(rcalldata\$final_1, rcalldata\$final_2, method = '`method'', useBytes = `usebytes_opt', weight = c(d = `d_opt', i = `i_opt', s = `s_opt', t = `t_opt'), q = `q', p = `p', bt = `bt' `nthread_opt')); ///
 			haven::write_dta(rcalldata, "_Rdatarcallstrdist_out.dta"); ///
 			rm(rcalldata)
-		}
+	}
 
 	if c(rc) > 0 {
 		di as error "Error when calling R. Check the error message above"
@@ -252,21 +254,22 @@ program define rcallstringdist
 	}
 
 	* merge results
-	di "Merging the data"
-	qui use "`origdata'", clear
+	di "Importing results"
 
-	* treat data not in the case of matrix
+	cap confirm file _Rdatarcallstrdist_out.dta
+	if c(rc) {
+		di as error "Could not find R's output file. Restoring original data. Report to https://github.com/luispfonseca/stata-rcallstringdist/issues"
+		qui use "`origdata'", clear
+		cap erase "`origdata'"
+		error 601
+	}
+
 	if "`matrix'" == "" {
-		cap confirm file _Rdatarcallstrdist_out.dta
-		if c(rc) {
-			di as error "Restoring original data because file with the converted data was not found. Report to https://github.com/luispfonseca/stata-rcallstringdist/issues"
-			qui use "`origdata'", clear
-			cap erase "`origdata'"
-			error 601
-		}
+		qui use "`origdata'", clear
 
 		tempvar numobs
-		gen `numobs' = _n
+		gen `numobs' = _n  // to later keep sorting order
+
 		tempvar rcallstringdist_merge
 		qui merge m:1 `1' `2' using _Rdatarcallstrdist_out.dta, keepusing(`generate') gen(`rcallstringdist_merge')
 		qui compress `generate'
@@ -287,14 +290,7 @@ program define rcallstringdist
 		sort `numobs'
 		cap erase "`origdata'"
 	}
-	else if "`matrix'" != "" { // matrix option
-		cap confirm file _Rdatarcallstrdist_out.dta
-		if c(rc) {
-			di as error "Restoring original data because file with the converted data was not found. Report to https://github.com/luispfonseca/stata-rcallstringdist/issues"
-			qui use "`origdata'", clear
-			cap erase "`origdata'"
-			error 601
-		}
+	else if "`matrix'" != "" {
 
 		qui use _Rdatarcallstrdist_out, clear
 
@@ -308,34 +304,32 @@ program define rcallstringdist
 		}
 
 		if "`numvars'" == "2" {
+			tokenize `varlist'
 			rename string1 `1'
 			rename string2 `2'
 			keep `1' `2' `generate'
 			`hash'sort `generate' `1' `2' // sorting is hard-coded to make it clear for users that, with matrix option, they should not expect the command to give him back the same order of strings they fed in, as duplicates and missing strings are dropped in the matrix option
 		}
 		else if "`numvars'" == "1" {
-			tokenize `varlist'
-			local 2 = "`1'"
 			keep string1 string2 `generate'
 			qui drop if string1 == string2
-			`hash'sort `generate' string1 string2 // see earlier comment
-		}
 
-		* remove duplicates if keepduplicates not called and we have one variable
-		if "`keepduplicates'" == "" & "`numvars'" == "1" {
+			* remove duplicates if keepduplicates not called and we have one variable
+			if "`keepduplicates'" == "" & "`numvars'" == "1" {
 
-			tempvar first second
-			gen `first' = cond(string1 < string2, string1, string2)
-			gen `second' = cond(string2 < string1, string1, string2)
+				tempvar first second
+				gen `first' = cond(string1 < string2, string1, string2)
+				gen `second' = cond(string2 < string1, string1, string2)
 
-			tempvar pair_id
-			qui `g'egen `pair_id' = group(`first' `second')
+				tempvar pair_id
+				qui `g'egen `pair_id' = group(`first' `second')
 
-			* keep only one string of the same pair, where string1 is the first, alphabetically
-			`hash'sort `pair_id' `string1' `string2'
-			tempvar pair_obs
-			bysort `pair_id': gen `pair_obs' = _n
-			qui drop if `pair_obs' > 1
+				* keep only one string of the same pair, where string1 is the first, alphabetically
+				`hash'sort `pair_id' `string1' `string2'
+				tempvar pair_obs
+				bysort `pair_id': gen `pair_obs' = _n
+				qui drop if `pair_obs' > 1
+			}
 
 			`hash'sort `generate' string1 string2 // see earlier comment
 		}
