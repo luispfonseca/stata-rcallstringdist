@@ -5,6 +5,8 @@
 {vieweralsosee "[R] help" "help help"}{...}
 {viewerjumpto "Syntax" "rcallstringdist##syntax"}{...}
 {viewerjumpto "Description" "rcallstringdist##description"}{...}
+{viewerjumpto "Methods" "rcallstringdist##methods"}{...}
+{viewerjumpto "Other R options" "rcallstringdist##ropt"}{...}
 {viewerjumpto "Examples" "rcallstringdist##examples"}{...}
 {title:Title}
 
@@ -15,7 +17,7 @@
 {title:Syntax}
 
 {p 8 15 2}
-{opt rcallcountrycode} {it:varlist} [, {opt m:ethod}({it:method}) {opt w:eight}({it:numlist}) {opt q}({it:integer}) {opt p}({it:numlist}) {opt bt}({it:numlist})  {opt usebytes} {opt nthread}({it:integer}) {opt mat:rix} {opt dup:licates} {opt gen:erate}({it:varname}) {opt sortw:ords} {opt debug}]
+{opt rcallstringdist} {it:varlist} [, {opt m:ethod}({it:method}) {opt w:eight}({it:numlist}) {opt q}({it:integer}) {opt p}({it:numlist}) {opt bt}({it:numlist})  {opt usebytes} {opt nthread}({it:integer}) {opt mat:rix} {opt dup:licates} {opt gen:erate}({it:varname}) {opt sortw:ords} {opt debug}]
 
 {synoptset 20 tabbed}{...}
 {synopthdr}
@@ -51,8 +53,8 @@ Additional options
 
 {pstd}This command has a few dependencies. Learn more about them at the GitHub repo page at {browse "https://github.com/luispfonseca/stata-rcallstringdist"}.
 
-{marker method}{...}
-{title:Method}
+{marker methods}{...}
+{title:Methods}
 
 {pstd}As of version 0.9.5.1 of stringdist (the R package), these are the available methods:
 
