@@ -97,13 +97,13 @@ program define rcallstringdist
 		}
 	}
 
-    if "`weight'" == "" {
+	if "`weight'" == "" {
 		local d_opt = 1
 		local i_opt = 1
 		local s_opt = 1
 		local t_opt = 1
-    }
-    else {
+	}
+	else {
 		tokenize "`weight'"
 		local d_opt = `1'
 		mac shift
@@ -330,14 +330,11 @@ program define rcallstringdist
 
 			`hash'sort `generate' string1 string2 // see earlier comment
 		}
-
-		if "`debug'" == "" {
-			cap erase _Rdatarcallstrdist_out.dta
-			cap erase "`cross'"
-			cap erase "`strings'"
-		}
-
 		qui compress
+	}
+
+	if "`debug'" == "" {
+		cap erase _Rdatarcallstrdist_out.dta
 	}
 
 end
